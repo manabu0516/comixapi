@@ -24,8 +24,8 @@ const run = async () => {
 
         const pathData = pathModule.parse(element);
 
-        const outputFile1 = +pathData.name + '_01' + pathData.ext;
-        const outputFile2 = +pathData.name + '_02' + pathData.ext;
+        const outputFile1 = pathData.name + '_01' + pathData.ext;
+        const outputFile2 = pathData.name + '_02' + pathData.ext;
 
         if(idx === 0) {
             const left = parseInt(splitWidth/2);

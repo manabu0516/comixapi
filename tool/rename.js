@@ -14,7 +14,7 @@ const run = async () => {
         const res = element.replace(/[^0-9]/g, '');
         const padNum = ('0000' + res).slice(-4);
         const extention = pathModule.extname(element);
-        const filename = padNum + extention;
+        const filename = 'p' + padNum + extention;
 
         console.log('rename :' + element + ' => ' + filename);
         await fs.rename(pathModule.join(targetDir, element), pathModule.join(targetDir, filename));
