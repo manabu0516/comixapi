@@ -46,7 +46,8 @@
     <script id="voluems-template" type="text/x-handlebars-template">
         <div class="row row-cols-3">
             {{#each data}}
-            <div data-comic="{{name}}" data-volume="{{vol}}" class="col volume-item" style="padding: 10px;cursor: pointer;">
+            <div data-comic="{{name}}" data-volume="{{vol}}" class="col volume-item" style="position: relative; padding: 10px;cursor: pointer;">
+                <span class="badge bg-primary" style="position: absolute;left: 30px;top: 30px;">{{basename vol}}</span>
                 <a><img class="img-thumbnail" src="/volume/thumbnail/{{name}}/{{vol}}"></a>
             </div>
             {{/each}}

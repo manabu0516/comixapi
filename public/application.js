@@ -2,6 +2,10 @@
 
 $(() => {
 
+    Handlebars.registerHelper('basename', function(text) {
+        return text.split('.').slice(0, -1).join('.');;
+     });
+
     const toJson = (text) => {
         try {
             return JSON.parse(decodeURI(text));
