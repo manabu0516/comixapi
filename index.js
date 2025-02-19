@@ -1,8 +1,7 @@
 
-
 const processIofo = {
-    current : process.cwd(),
-    module  : __dirname
+    current : process.argv[2],
+    module  : __dirname,
 };
 
 const jszip = require('jszip');
@@ -13,9 +12,22 @@ const crypto = require('crypto');
 const app = express();
 
 app.use(express.json())
-app.use(express.urlencoded({ extended: true}))
+app.use(express.urlencoded({ extended: true}));
 
-app.listen(3000, console.log('Server listening port 3000'));
+const initializeDir = async (path) => {
+    try {
+        const stat = await fs.access(path, fs.constants.R_OK | fs.constants.W_OK);
+    } catch (e) {
+        await fs.mkdir(path,  {recursive: true});
+    }
+    
+};
+
+const initialize = async () => {
+    await initializeDir(pathModule.join(processIofo.current, '_meta', 'cache'));
+
+    app.listen(3000, console.log('Server listening port 3000'));
+};
 
 const cache = (() => {
     const hashKey = async (key) => {
@@ -31,11 +43,12 @@ const cache = (() => {
     const contains = async (key) => {
         try {
             const fullPath = pathModule.join(processIofo.current, '_meta', 'cache', key + '.jpg');
-            const stat = fs.stat(fullPath);
-            return await stat.isFile();
+            const stat = await fs.stat(fullPath);
+            return stat.isFile();
         } catch(e) {
             return false;
         }
+        
     };
 
     return {
@@ -106,8 +119,8 @@ app.get('/volume/thumbnail/:id/:vol', async (req, res) => {
         const fullPath = pathModule.join(processIofo.current, req.params.id, req.params.vol);
 
         const cacheKey = await cache.hashKey(fullPath + ':thumbnail');
-        if(cache.contains(cacheKey) === true) {
-            res.redirect('/cache/' + cacheKey);
+        if(await cache.contains(cacheKey) === true) {
+            res.redirect('/cache/' + cacheKey + '.jpg');
             return;
         }
         
@@ -122,11 +135,11 @@ app.get('/volume/thumbnail/:id/:vol', async (req, res) => {
     
             const content = await file.async('nodebuffer');
             cacheData = cache.put(cacheKey, content);
+
+            res.type('jpg');
+            res.send(content);
             break;
         }
-
-        res.type('jpg');
-        res.send(cacheData);
     } catch (e) {
         res.status(500).send('internal server error');
         console.log(e);
@@ -168,8 +181,8 @@ app.get('/page/:id/:vol', async (req, res) => {
         const filename = req.query['p'];
 
         const cacheKey = await cache.hashKey(fullPath + ':' +filename);
-        if(cache.contains(cacheKey) === true) {
-            res.redirect('/cache/' + cacheKey);
+        if(await cache.contains(cacheKey) === true) {
+            res.redirect('/cache/' + cacheKey + '.jpg');
             return;
         }
 
@@ -183,7 +196,7 @@ app.get('/page/:id/:vol', async (req, res) => {
         cacheData = cache.put(cacheKey, content);
 
         res.type('jpg');
-        res.send(cacheData);
+        res.send(content);
     } catch (e) {
         res.status(500).send('internal server error');
         console.log(e);
@@ -191,4 +204,6 @@ app.get('/page/:id/:vol', async (req, res) => {
 });
 
 app.use('/static', express.static(pathModule.join(processIofo.module, 'public')));
-app.use('/static', express.static(pathModule.join(processIofo.current, '_meta', 'cache')));
+app.use('/cache', express.static(pathModule.join(processIofo.current, '_meta', 'cache')));
+
+initialize();
