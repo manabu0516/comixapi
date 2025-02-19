@@ -9,6 +9,7 @@ const jszip = require('jszip');
 const pathModule = require('path');
 const fs = require('fs').promises;
 const express = require('express');
+const crypto = require('crypto');
 const app = express();
 
 app.use(express.json())
@@ -17,8 +18,6 @@ app.use(express.urlencoded({ extended: true}))
 app.listen(3000, console.log('Server listening port 3000'));
 
 const cache = (() => {
-    const crypto = require('crypto');
-
     const hashKey = async (key) => {
         return crypto.createHash('md5').update(key).digest('hex')
     };
