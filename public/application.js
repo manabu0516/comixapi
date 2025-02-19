@@ -88,6 +88,7 @@ $(() => {
 
         const html = await module(parameter);
         $("#container").html(html);
+        window.scroll({top: 0,behavior: "smooth",});
         setTimeout(() => {loading.hide();}, 1000);
         
     };
