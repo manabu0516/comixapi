@@ -34,15 +34,20 @@ const cache = (() => {
         return crypto.createHash('md5').update(key).digest('hex')
     };
 
-    const put = async (key, content) => {
-        const fullPath = pathModule.join(processIofo.current, '_meta', 'cache', key + '.jpg');
+    const put = async (key, content, ext) => {
+        const fullPath = pathModule.join(processIofo.current, '_meta', 'cache', key + ext);
         fs.writeFile(fullPath, content);
         return content;
     };
 
-    const contains = async (key) => {
+    const get = async (key, ext) => {
+        const fullPath = pathModule.join(processIofo.current, '_meta', 'cache', key + ext);
+        return await fs.readFile(fullPath);
+    };
+
+    const contains = async (key, ext) => {
         try {
-            const fullPath = pathModule.join(processIofo.current, '_meta', 'cache', key + '.jpg');
+            const fullPath = pathModule.join(processIofo.current, '_meta', 'cache', key + ext);
             const stat = await fs.stat(fullPath);
             return stat.isFile();
         } catch(e) {
@@ -54,6 +59,7 @@ const cache = (() => {
     return {
         hashKey : hashKey,
         put : put,
+        get : get,
         contains : contains,
     };
 })();
@@ -119,7 +125,7 @@ app.get('/volume/thumbnail/:id/:vol', async (req, res) => {
         const fullPath = pathModule.join(processIofo.current, req.params.id, req.params.vol);
 
         const cacheKey = await cache.hashKey(fullPath + ':thumbnail');
-        if(await cache.contains(cacheKey) === true) {
+        if(await cache.contains(cacheKey, '.jpg') === true) {
             res.redirect('/cache/' + cacheKey + '.jpg');
             return;
         }
@@ -134,7 +140,7 @@ app.get('/volume/thumbnail/:id/:vol', async (req, res) => {
             }
     
             const content = await file.async('nodebuffer');
-            cacheData = cache.put(cacheKey, content);
+            cacheData = cache.put(cacheKey, content, '.jpg');
 
             res.type('jpg');
             res.send(content);
@@ -151,6 +157,12 @@ app.get('/volume/entries/:id/:vol', async (req, res) => {
     try {
         const result = [];
         const fullPath = pathModule.join(processIofo.current, req.params.id, req.params.vol);
+
+        const cacheKey = await cache.hashKey(fullPath + ':json');
+        if(await cache.contains(cacheKey, '.json') === true) {
+            res.json(JSON.parse(await cache.get(cacheKey, '.json')));
+            return;
+        }
         
         const data = await fs.readFile(fullPath);
         const zip = jszip();
@@ -169,6 +181,7 @@ app.get('/volume/entries/:id/:vol', async (req, res) => {
         }
 
         res.json(result);
+        cache.put(cacheKey, JSON.stringify(result), '.json');
     } catch (e) {
         res.status(500).send('internal server error');
         console.log(e);
@@ -181,7 +194,7 @@ app.get('/page/:id/:vol', async (req, res) => {
         const filename = req.query['p'];
 
         const cacheKey = await cache.hashKey(fullPath + ':' +filename);
-        if(await cache.contains(cacheKey) === true) {
+        if(await cache.contains(cacheKey, '.jpg') === true) {
             res.redirect('/cache/' + cacheKey + '.jpg');
             return;
         }
@@ -193,7 +206,7 @@ app.get('/page/:id/:vol', async (req, res) => {
         const file = zip.files[filename];
         
         const content = await file.async('nodebuffer');
-        cacheData = cache.put(cacheKey, content);
+        cacheData = cache.put(cacheKey, content, '.jpg');
 
         res.type('jpg');
         res.send(content);
