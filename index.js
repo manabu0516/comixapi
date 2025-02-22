@@ -7,216 +7,143 @@ const processIofo = {
 const jszip = require('jszip');
 const pathModule = require('path');
 const fs = require('fs').promises;
-const express = require('express');
-const crypto = require('crypto');
-const app = express();
-
-app.use(express.json())
-app.use(express.urlencoded({ extended: true}));
-
-const initializeDir = async (path) => {
-    try {
-        const stat = await fs.access(path, fs.constants.R_OK | fs.constants.W_OK);
-    } catch (e) {
-        await fs.mkdir(path,  {recursive: true});
-    }
-    
-};
 
 const initialize = async () => {
-    await initializeDir(pathModule.join(processIofo.current, '_meta', 'cache'));
+    const htmlFile = pathModule.join(processIofo.current, 'index.html');
+    if(await isExistFile(htmlFile) === false) {
+        console.log('no exsist :' + htmlFile);
+        console.log('copy index.html');
+        fs.copyFile( pathModule.join(processIofo.module, "public", "index.html"), htmlFile);
+    } else {
+        console.log('exsist :' + htmlFile + ' [ok]');
+    }
 
-    app.listen(3000, console.log('Server listening port 3000'));
+    const scriptFile = pathModule.join(processIofo.current, 'application.js');
+    if(await isExistFile(scriptFile) === false) {
+        console.log('no exsist :' + scriptFile);
+        console.log('copy application.js');
+        fs.copyFile( pathModule.join(processIofo.module, "public", "application.js"), scriptFile);
+    } else {
+        console.log('exsist :' + scriptFile + ' [ok]');
+    }
+
+    console.log("initialize complete.");
+    run();
 };
 
-const cache = (() => {
-    const hashKey = async (key) => {
-        return crypto.createHash('md5').update(key).digest('hex')
-    };
-
-    const put = async (key, content, ext) => {
-        const fullPath = pathModule.join(processIofo.current, '_meta', 'cache', key + ext);
-        fs.writeFile(fullPath, content);
-        return content;
-    };
-
-    const get = async (key, ext) => {
-        const fullPath = pathModule.join(processIofo.current, '_meta', 'cache', key + ext);
-        return await fs.readFile(fullPath);
-    };
-
-    const contains = async (key, ext) => {
-        try {
-            const fullPath = pathModule.join(processIofo.current, '_meta', 'cache', key + ext);
-            const stat = await fs.stat(fullPath);
-            return stat.isFile();
-        } catch(e) {
-            return false;
-        }
-        
-    };
-
-    return {
-        hashKey : hashKey,
-        put : put,
-        get : get,
-        contains : contains,
-    };
-})();
-
-app.get('/comics', async (req, res) => {
+const run = async () => {
     try {
+        const collection = await fs.readdir(processIofo.current);
         const result = [];
-        
-        const files = await fs.readdir(processIofo.current);
-        for (let i = 0; i < files.length; i++) {
-            const f = files[i];
-            const fullPath = pathModule.join(processIofo.current, f);
 
-            const stat = await fs.stat(fullPath);
-            if(stat.isDirectory() === true &&  f.startsWith("_") === false) {
-                result.push(f);
+        console.log("process start.");
+        for (let i = 0; i < collection.length; i++) {
+            const element = collection[i];
+            const info = await fs.stat(pathModule.join(processIofo.current, element));
+
+            if(info.isDirectory() === true && await isExistFile(pathModule.join(processIofo.current, element, 'thumbnail.jpg'))) {
+                console.log('  scan start : ' + pathModule.join(processIofo.current, element));
+                await scan_comic(pathModule.join(processIofo.current, element));
+                result.push(element);
+                console.log('  scan end : ' + pathModule.join(processIofo.current, element));
             }
         }
-        res.json(result);
+
+        const comicJsonPath = pathModule.join(processIofo.current, 'comics.json');
+
+        console.log("  write comic json data : "+comicJsonPath);
+        await fs.writeFile(comicJsonPath, JSON.stringify(result, null , "\t"));
+        console.log("process end [success].");
     } catch(e) {
-        res.status(500).send('internal server error');
-        console.log(e);
+        console.log(' process error :' + e);
+        console.log("process end [error].");
     }
-});
 
-app.get('/volumes/:id', async (req, res) => {
-    try {
-        const result = [];
-        const target = pathModule.join(processIofo.current, req.params.id);
-        
-        const files = await fs.readdir(target);
-        for (let i = 0; i < files.length; i++) {
-            const f = files[i];
-            const fullPath = pathModule.join(processIofo.current, req.params.id, f);
-            const stat = await fs.stat(fullPath);
-            if(stat.isFile() === true && f.endsWith(".zip")) {
-                result.push({
-                    name : req.params.id,vol : f
-                });
+    const nextsec = 1000 * 60 * 10;
+    console.log("------ next " + nextsec + "[msec] after.");
+    setTimeout(async () => {
+        await run();
+    }, nextsec);
+};
+
+const scan_comic = async (rootPath) => {
+    const collection = await fs.readdir(rootPath);
+    const processed = {};
+
+    for (let i = 0; i < collection.length; i++) {
+        const element = collection[i];
+        const volumePath = pathModule.join(rootPath, element);
+        const info = await fs.stat(volumePath);
+
+        if(info.isDirectory() === true) {
+            console.log('    scan volume [dir]: ' + element);
+            const collection = (await fs.readdir(volumePath)).filter(s => s.endsWith('.jpeg') || s.endsWith('.jpg'));
+            processed[element] = collection;
+        }
+    }
+
+    for (let i = 0; i < collection.length; i++) {
+        const element = collection[i];
+        const volumePath = pathModule.join(rootPath, element);
+        const info = await fs.stat(volumePath);
+
+        if(info.isFile() === true && element.endsWith(".zip")) {
+            const basefilename = pathModule.basename(element, '.zip');
+            console.log('    scan volume [zip]: ' + element);
+            const exist = processed[basefilename] !== undefined;
+
+            const generateTarget = pathModule.join(rootPath, basefilename);
+            if(exist) {
+                console.log('      exist volume : ' + element);
+                console.log('      delete volume and overwrite : ' + element + ' => ' + basefilename);
+                await fs.rm(generateTarget, { recursive: true, force: true });
+                delete processed[basefilename];
+            };
+
+            const zipdata = await fs.readFile(volumePath);
+            const zip = jszip();
+            await zip.loadAsync(zipdata);
+
+            console.log('      create volume : ' + element);
+            await fs.mkdir(generateTarget, { recursive: true });
+
+            const entries = [];
+            for (const fileName in zip.files) {
+                const file = zip.files[fileName];
+                if(file.dir === true) {
+                    continue;
+                }
+                const content = await file.async('nodebuffer');
+                await fs.writeFile(pathModule.join(generateTarget, fileName), content);
+                entries.push(fileName);
             }
+            processed[basefilename] = entries;
+
+            console.log('      delete volume zip : ' + volumePath);
+            await fs.rm(volumePath, { recursive: true, force: true });
         }
-        res.json(result);
-    } catch(e) {
-        res.status(500).send('internal server error');
-        console.log(e);
     }
-});
 
-app.get('/comic/thumbnail/:id', async (req, res) => {
+    const result = [];
+    const keys = Object.keys(processed).forEach(e => {
+        result.push({
+            key : e, pages : processed[e]
+        })
+    });
+
+    const volumesJsonPath = pathModule.join(rootPath, 'volumes.json');
+    console.log("    write volumes json data : " + volumesJsonPath);
+    await fs.writeFile(volumesJsonPath, JSON.stringify(result, null , "\t"));
+};
+
+const isExistFile = async (path) => {
     try {
-        const fullPath = pathModule.join(processIofo.current, req.params.id, 'thumbnail.jpg');
-        const imageDtata = await fs.readFile(fullPath);
-        res.type('jpg');
-        res.send(imageDtata);
-    } catch(e) {
-        res.status(500).send('internal server error');
-        console.log(e);
-    }
-});
-
-app.get('/volume/thumbnail/:id/:vol', async (req, res) => {
-    try {
-        const fullPath = pathModule.join(processIofo.current, req.params.id, req.params.vol);
-
-        const cacheKey = await cache.hashKey(fullPath + ':thumbnail');
-        if(await cache.contains(cacheKey, '.jpg') === true) {
-            res.redirect('/cache/' + cacheKey + '.jpg');
-            return;
-        }
-        
-        const data = await fs.readFile(fullPath);
-        const zip = jszip();
-        await zip.loadAsync(data);
-        for (const fileName in zip.files) {
-            const file = zip.files[fileName];
-            if(file.dir === true) {
-                continue;
-            }
-    
-            const content = await file.async('nodebuffer');
-            cacheData = cache.put(cacheKey, content, '.jpg');
-
-            res.type('jpg');
-            res.send(content);
-            break;
-        }
+        const stat = await fs.access(path, fs.constants.R_OK | fs.constants.W_OK);
+        return true;
     } catch (e) {
-        res.status(500).send('internal server error');
-        console.log(e);
+        return false;
     }
-});
 
-app.get('/volume/entries/:id/:vol', async (req, res) => {
-    
-    try {
-        const result = [];
-        const fullPath = pathModule.join(processIofo.current, req.params.id, req.params.vol);
-
-        const cacheKey = await cache.hashKey(fullPath + ':json');
-        if(await cache.contains(cacheKey, '.json') === true) {
-            res.json(JSON.parse(await cache.get(cacheKey, '.json')));
-            return;
-        }
-        
-        const data = await fs.readFile(fullPath);
-        const zip = jszip();
-        await zip.loadAsync(data);
-        
-        for (const fileName in zip.files) {
-            const file = zip.files[fileName];
-            if(file.dir === true) {
-                continue;
-            }
-            result.push({
-                name : fileName,
-                comic : req.params.id,
-                volume : req.params.vol
-            });
-        }
-
-        res.json(result);
-        cache.put(cacheKey, JSON.stringify(result), '.json');
-    } catch (e) {
-        res.status(500).send('internal server error');
-        console.log(e);
-    }
-});
-
-app.get('/page/:id/:vol', async (req, res) => {
-    try {
-        const fullPath = pathModule.join(processIofo.current, req.params.id, req.params.vol);
-        const filename = req.query['p'];
-
-        const cacheKey = await cache.hashKey(fullPath + ':' +filename);
-        if(await cache.contains(cacheKey, '.jpg') === true) {
-            res.redirect('/cache/' + cacheKey + '.jpg');
-            return;
-        }
-
-        const data = await fs.readFile(fullPath);
-        const zip = jszip();
-        await zip.loadAsync(data);
-        
-        const file = zip.files[filename];
-        
-        const content = await file.async('nodebuffer');
-        cacheData = cache.put(cacheKey, content, '.jpg');
-
-        res.type('jpg');
-        res.send(content);
-    } catch (e) {
-        res.status(500).send('internal server error');
-        console.log(e);
-    }
-});
-
-app.use('/static', express.static(pathModule.join(processIofo.module, 'public')));
-app.use('/cache', express.static(pathModule.join(processIofo.current, '_meta', 'cache')));
+}
 
 initialize();

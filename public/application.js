@@ -3,8 +3,16 @@
 $(() => {
 
     Handlebars.registerHelper('basename', function(text) {
-        return text.split('.').slice(0, -1).join('.');;
-     });
+        return text.split('.').slice(0, -1).join('.');
+    });
+
+    Handlebars.registerHelper('stringify', function(json) {
+        return new Handlebars.SafeString(JSON.stringify(json));
+    });
+
+    Handlebars.registerHelper('first', function(json) {
+        return json[0];
+    });
 
     const toJson = (text) => {
         try {
@@ -26,7 +34,7 @@ $(() => {
         });
 
         return async (parameter) => {
-            const response = await fetch("/comics");
+            const response = await fetch("./comics.json");
             return template({data : await response.json()});
         };
     })();
@@ -35,8 +43,10 @@ $(() => {
         var template = Handlebars.compile($("#volume-template").html());
         
         return async (parameter) => {
-            const response = await fetch("/volume/entries/"+parameter.comic+"/"+ parameter.volume);
-            return template({data : await response.json()});
+            const json = parameter.pages.map(e => {
+                return './' + parameter.base + '/' + e;
+            });
+            return template({data : json});
         };
 
     })();
@@ -46,17 +56,22 @@ $(() => {
 
         $(document).on("click", ".volume-item", (e) => {
 
-            const comic = $(e.currentTarget).attr("data-comic");
-            const volume = $(e.currentTarget).attr("data-volume");
+            const pages = $(e.currentTarget).attr("data-pages");
+            const base = $(e.currentTarget).attr("data-base");
 
-            location.hash = 'volume,' + JSON.stringify({comic : comic, volume : volume});
+            location.hash = 'volume,' + JSON.stringify({pages : JSON.parse(pages), base : base});
             return false;
         });
 
         return async (parameter) => {
             const target = parameter.target;
-            const response = await fetch("/volumes/"+target);
-            return template({data : await response.json()});
+            const response = await fetch("./"+target+'/volumes.json');
+            const json = await response.json();
+
+            json.forEach(e => {
+                e.target = target;
+            });
+            return template({data : json});
         };
     })();
 

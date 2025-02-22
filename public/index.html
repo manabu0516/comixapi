@@ -37,7 +37,7 @@
         <div class="row row-cols-3">
             {{#each data}}
             <div data-comic="{{this}}" class="col comic-item" style="padding: 10px;cursor: pointer;">
-                <a><img class="img-thumbnail" src="/comic/thumbnail/{{this}}"></a>
+                <a><img class="img-thumbnail" src="./{{this}}/thumbnail.jpg"></a>
             </div>
             {{/each}}
         </div>
@@ -46,9 +46,9 @@
     <script id="voluems-template" type="text/x-handlebars-template">
         <div class="row row-cols-3">
             {{#each data}}
-            <div data-comic="{{name}}" data-volume="{{vol}}" class="col volume-item" style="position: relative; padding: 10px;cursor: pointer;">
-                <span class="badge bg-primary" style="position: absolute;left: 30px;top: 30px;">{{basename vol}}</span>
-                <a><img class="img-thumbnail" src="/volume/thumbnail/{{name}}/{{vol}}"></a>
+            <div data-pages='{{stringify pages}}' data-base="{{target}}/{{key}}" class="col volume-item" style="position: relative; padding: 10px;cursor: pointer;">
+                <span class="badge bg-primary" style="position: absolute;left: 30px;top: 30px;">{{basename key}}</span>
+                <a><img class="img-thumbnail" src="./{{target}}/{{key}}/{{first pages}}"></a>
             </div>
             {{/each}}
         </div>
@@ -58,7 +58,7 @@
         <div style="text-align: center;">
         {{#each data}}
         <div style="padding: 5px;">
-            <img class="img-thumbnail" loading="lazy" src="/page/{{comic}}/{{volume}}?p={{name}}"></a>
+            <img class="img-thumbnail" loading="lazy" src="{{this}}"></a>
         </div>
         {{/each}}
         </div>
