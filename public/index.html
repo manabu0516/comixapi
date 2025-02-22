@@ -34,21 +34,21 @@
     </div>
 
     <script id="comics-template" type="text/x-handlebars-template">
-        <div class="row row-cols-3">
+        <div class="row row-cols-1">
             {{#each data}}
-            <div data-comic="{{this}}" class="col comic-item" style="padding: 10px;cursor: pointer;">
-                <a><img class="img-thumbnail" src="./{{this}}/thumbnail.jpg"></a>
+            <div data-comic="{{this}}" class="col comic-item" style="text-align: center;padding: 10px;cursor: pointer;">
+                <a><img class="img-thumbnail" src="./{{this}}/thumbnail.jpg" style="width: 100%;"></a>
             </div>
             {{/each}}
         </div>
     </script>
 
     <script id="voluems-template" type="text/x-handlebars-template">
-        <div class="row row-cols-3">
+        <div class="row row-cols-1">
             {{#each data}}
             <div data-pages='{{stringify pages}}' data-base="{{target}}/{{key}}" class="col volume-item" style="position: relative; padding: 10px;cursor: pointer;">
-                <span class="badge bg-primary" style="position: absolute;left: 30px;top: 30px;">{{basename key}}</span>
-                <a><img class="img-thumbnail" src="./{{target}}/{{key}}/{{first pages}}"></a>
+                <span class="badge bg-primary" style="text-align: center;position: absolute;left: 30px;top: 30px;">{{basename key}}</span>
+                <a><img class="img-thumbnail" src="./{{target}}/{{key}}/{{first pages}}" style="width: 100%;"></a>
             </div>
             {{/each}}
         </div>
@@ -57,8 +57,8 @@
     <script id="volume-template" type="text/x-handlebars-template">
         <div style="text-align: center;">
         {{#each data}}
-        <div style="padding: 5px;">
-            <img class="img-thumbnail" loading="lazy" src="{{this}}"></a>
+        <div style="padding: 5px;text-align: center;">
+            <img class="img-thumbnail" loading="lazy" src="{{this}}" style="width: 100%;"></a>
         </div>
         {{/each}}
         </div>
