@@ -1,6 +1,5 @@
 
-
-$(() => {
+$(() =>  {
 
     Handlebars.registerHelper('basename', function(text) {
         return text.split('.').slice(0, -1).join('.');
@@ -13,6 +12,13 @@ $(() => {
     Handlebars.registerHelper('first', function(json) {
         return json[0];
     });
+    
+    Handlebars.registerHelper('bg', function(data) {
+        const url = typeof data === "object"
+            ? data.target + "/" + data.key + "/" + data.pages[0]
+            : data +"/thumbnail.jpg";
+        return "background-image:url("+url+");background-repeat: no-repeat;background-size: contain;background-position: center;background-color: dimgrey;";
+    });
 
     const toJson = (text) => {
         try {
@@ -21,6 +27,8 @@ $(() => {
             return {};
         }
     };
+
+    const entries = loadEntry();
 
     const routingModules = {};
 
@@ -34,8 +42,14 @@ $(() => {
         });
 
         return async (parameter) => {
-            const response = await fetch("./comics.json");
-            return template({data : await response.json()});
+            const comics = [];
+            for (let i = 0; i < entries.length; i++) {
+                const element = entries[i];
+                const response = await fetch(element);
+                const json = await response.json()
+                json.forEach(e => comics.push(e));
+            }
+            return template({data : comics});
         };
     })();
 
@@ -44,7 +58,7 @@ $(() => {
         
         return async (parameter) => {
             const json = parameter.pages.map(e => {
-                return './' + parameter.base + '/' + e;
+                return parameter.base + '/' + e;
             });
             return template({data : json});
         };
@@ -65,7 +79,7 @@ $(() => {
 
         return async (parameter) => {
             const target = parameter.target;
-            const response = await fetch("./"+target+'/volumes.json');
+            const response = await fetch(target+'/volumes.json');
             const json = await response.json();
 
             json.forEach(e => {

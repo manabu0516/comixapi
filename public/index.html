@@ -11,6 +11,19 @@
             background: rgba(0, 0, 0, .5);
             z-index: 10000;
         }
+        
+        .comic-item {width: 33%}
+        .volume-item {width: 33%}
+        .page-item {width: 50%;float: right;}
+        
+        .comic-item .img-thumbnail {height:300px;}
+        .volume-item .img-thumbnail {height:300px;}
+        
+        @media screen and (max-width: 480px) {
+            .comic-item {width: 100%}
+            .volume-item {width: 100%}
+            .page-item {width: 100%}
+        }
     </style>
 
   </head>
@@ -37,7 +50,7 @@
         <div class="row row-cols-1">
             {{#each data}}
             <div data-comic="{{this}}" class="col comic-item" style="text-align: center;padding: 10px;cursor: pointer;">
-                <a><img class="img-thumbnail" src="./{{this}}/thumbnail.jpg" style="width: 100%;"></a>
+                <div class="img-thumbnail" style="{{bg this}}"></div>
             </div>
             {{/each}}
         </div>
@@ -47,8 +60,7 @@
         <div class="row row-cols-1">
             {{#each data}}
             <div data-pages='{{stringify pages}}' data-base="{{target}}/{{key}}" class="col volume-item" style="position: relative; padding: 10px;cursor: pointer;">
-                <span class="badge bg-primary" style="text-align: center;position: absolute;left: 30px;top: 30px;">{{basename key}}</span>
-                <a><img class="img-thumbnail" src="./{{target}}/{{key}}/{{first pages}}" style="width: 100%;"></a>
+                <div class="img-thumbnail" style="{{bg this}}"></div>
             </div>
             {{/each}}
         </div>
@@ -57,7 +69,7 @@
     <script id="volume-template" type="text/x-handlebars-template">
         <div style="text-align: center;">
         {{#each data}}
-        <div style="padding: 5px;text-align: center;">
+        <div style="padding: 5px;text-align: center;" class="page-item">
             <img class="img-thumbnail" loading="lazy" src="{{this}}" style="width: 100%;"></a>
         </div>
         {{/each}}
@@ -66,6 +78,18 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.8/handlebars.min.js" integrity="sha512-E1dSFxg+wsfJ4HKjutk/WaCzK7S2wv1POn1RRPGh8ZK+ag9l244Vqxji3r6wgz9YBf6+vhQEYJZpSjqWFPg9gg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script>
+        const loadEntry = (() => {
+            const context = {};
+            return (data) => {
+                if(data !== undefined && data !== null) {
+                    context.entries = data;
+                }
+                return context.entries;
+            };
+        })();
+    </script>
     <script src="application.js"></script>
+    <script src="allcomic.js"></script>
   </body>
 </html>

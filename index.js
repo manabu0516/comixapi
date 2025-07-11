@@ -8,65 +8,87 @@ const jszip = require('jszip');
 const pathModule = require('path');
 const fs = require('fs').promises;
 
-const initialize = async () => {
-    const htmlFile = pathModule.join(processIofo.current, 'index.html');
+const initialize = async (configure, comixEntries) => {
+    const htmlFile = pathModule.join(processIofo.current, configure.webdirectory, 'index.html');
     if(await isExistFile(htmlFile) === false) {
         console.log('no exsist :' + htmlFile);
         console.log('copy index.html');
-        fs.copyFile( pathModule.join(processIofo.module, "public", "index.html"), htmlFile);
+        await fs.mkdir(pathModule.join(processIofo.current, configure.webdirectory), { recursive: true });
+        await fs.copyFile( pathModule.join(processIofo.module, "public", "index.html"), htmlFile);
     } else {
         console.log('exsist :' + htmlFile + ' [ok]');
     }
 
-    const scriptFile = pathModule.join(processIofo.current, 'application.js');
-    if(await isExistFile(scriptFile) === false) {
-        console.log('no exsist :' + scriptFile);
+    const scriptFile1 = pathModule.join(processIofo.current, configure.webdirectory, 'application.js');
+    if(await isExistFile(scriptFile1) === false) {
+        console.log('no exsist :' + scriptFile1);
         console.log('copy application.js');
-        fs.copyFile( pathModule.join(processIofo.module, "public", "application.js"), scriptFile);
+        await fs.mkdir(pathModule.join(processIofo.current, configure.webdirectory), { recursive: true });
+        fs.copyFile( pathModule.join(processIofo.module, "public", "application.js"), scriptFile1);
     } else {
-        console.log('exsist :' + scriptFile + ' [ok]');
+        console.log('exsist :' + scriptFile1 + ' [ok]');
     }
 
+    const scriptFile2 = pathModule.join(processIofo.current, configure.webdirectory, 'allcomic.js');
+    console.log('write allcomic.js');
+    await fs.mkdir(pathModule.join(processIofo.current, configure.webdirectory), { recursive: true });
+    fs.writeFile(scriptFile2, "loadEntry(" + JSON.stringify(comixEntries) + ');');
+
     console.log("initialize complete.");
-    run();
 };
 
 const run = async () => {
     try {
-        const collection = await fs.readdir(processIofo.current);
-        const result = [];
+        const comixEntries = [];
+
+        const configure = JSON.parse(
+            await fs.readFile(pathModule.join(processIofo.current , 'comixapi.json'))
+        );
 
         console.log("process start.");
-        for (let i = 0; i < collection.length; i++) {
-            const element = collection[i];
-            const info = await fs.stat(pathModule.join(processIofo.current, element));
-
-            if(info.isDirectory() === true && await isExistFile(pathModule.join(processIofo.current, element, 'thumbnail.jpg'))) {
-                console.log('  scan start : ' + pathModule.join(processIofo.current, element));
-                await scan_comic(pathModule.join(processIofo.current, element));
-                result.push(element);
-                console.log('  scan end : ' + pathModule.join(processIofo.current, element));
-            }
+        for (let i = 0; i < configure.storages.length; i++) {
+            const element = configure.storages[i];
+            
+            await scanStorage(pathModule.join(processIofo.current, element.storage), element.webroot, comixEntries);
         }
 
-        const comicJsonPath = pathModule.join(processIofo.current, 'comics.json');
+        await initialize(configure, comixEntries);
 
-        console.log("  write comic json data : "+comicJsonPath);
-        await fs.writeFile(comicJsonPath, JSON.stringify(result, null , "\t"));
         console.log("process end [success].");
     } catch(e) {
         console.log(' process error :' + e);
         console.log("process end [error].");
     }
-
-    const nextsec = 1000 * 60 * 10;
-    console.log("------ next " + nextsec + "[msec] after.");
-    setTimeout(async () => {
-        await run();
-    }, nextsec);
 };
 
-const scan_comic = async (rootPath) => {
+const scanStorage = async (rootPath, roorWeb, comixEntries) => {
+    const collection = await fs.readdir(rootPath);
+    const entries = [];
+
+    for (let i = 0; i < collection.length; i++) {
+        const element = collection[i];
+        const info = await fs.stat(pathModule.join(rootPath, element));
+
+        const thubnail = pathModule.join(rootPath, element, 'thumbnail.jpg');
+        if(info.isDirectory() === true && await isExistFile(thubnail)) {
+            console.log('  scan start : ' + pathModule.join(rootPath, element));
+            await scan_comic(pathModule.join(rootPath, element), roorWeb);
+            entries.push(pathModule.join(roorWeb , element));
+            console.log('  scan end : ' + pathModule.join(rootPath, element));
+        }
+    }
+
+    const comicJsonPath = pathModule.join(rootPath, 'comics.json');
+    const comicJsonUrl = pathModule.join(roorWeb, 'comics.json');
+
+    console.log("  write comic json data : " + comicJsonPath);
+    await fs.writeFile(comicJsonPath, JSON.stringify(entries, null , "\t"));
+    console.log("process end [success].");
+
+    comixEntries.push(comicJsonUrl);
+};
+
+const scan_comic = async (rootPath, roorWeb) => {
     const collection = await fs.readdir(rootPath);
     const processed = {};
 
@@ -146,4 +168,4 @@ const isExistFile = async (path) => {
 
 }
 
-initialize();
+run();
