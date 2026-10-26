@@ -1,29 +1,60 @@
 
 const processIofo = {
-    configure : process.argv[2],
     module  : __dirname,
 };
 
-const res = require('express/lib/response');
-const jszip = require('jszip');
 const pathModule = require('path');
 const fs = require('fs').promises;
+const { Command } = require('commander');
+
+const program = new Command();
+
+program
+  .name('comixapi-cli')
+  .description('漫画をWEBで閲覧するための漫画ごとのJSONファイルを生成する')
+  .version('1.0.0');
+
+program
+  .requiredOption('-c, --config <path>', '設定ファイルのパス')
+  .requiredOption('-t, --target <target>', '生成する漫画の名称 ※すべて生成しなおす場合はall)')
+  .option('-i, --index', 'インデックスファイルを初期化する')
+  .option('-r, --resource', 'リソースファイルを強制上書きする');
+
+program.parse(process.argv);
+
+const options = program.opts();
+
+processIofo.configure = options.config;
+processIofo.target = options.target;
+processIofo.isRegenerateResource =  !!options.resource; 
+processIofo.isRegenerateIndex =  !!options.index; 
 
 const run = async () => {
-    try {
-        const comixEntries = [];
+    console.log('enviroment : '+ JSON.stringify(processIofo));
 
-        const configure = JSON.parse(
-            await fs.readFile(processIofo.configure)
-        );
+    if((await isExistFile(processIofo.configure)) == false) {
+        console.log('not found coinfigure file :' + processIofo.configure);
+        return;
+    }
+    const configure = JSON.parse(await fs.readFile(processIofo.configure));
+
+    try {
+        const indexJsonFile = pathModule.join(configure.web.path, 'index.json');
+        const indexData = processIofo.isRegenerateIndex == false && (await isExistFile(indexJsonFile)) === true ? JSON.parse(await fs.readFile(indexJsonFile)) : {};
+
+        const include_targets = processIofo.target === 'all' ? [] : [processIofo.target];
 
         console.log("process start.");
         for (let i = 0; i < configure.storages.length; i++) {
             const confStorage = configure.storages[i];
-            await scanStorage(confStorage, configure.web, comixEntries);
+            await scanStorage(indexData, confStorage, configure.web, include_targets);
         }
 
-        await initialize(configure);
+        console.log("  write start comics json data : " + indexJsonFile);
+        await fs.writeFile(indexJsonFile, JSON.stringify(indexData, null , "\t"));
+        console.log("  write end comics json data : " + indexJsonFile);
+
+        await res_copy(configure);
 
         console.log("process end [success].");
     } catch(e) {
@@ -41,9 +72,21 @@ const isExistFile = async (path) => {
     }
 };
 
-const scanStorage = async (confStorage, confWeb, comixEntries) => {
-    const collection = await fs.readdir(confStorage.path);
-    const entries = [];
+const isTarget = (name, targets) => {
+    if(targets.length === 0) {
+        return true;
+    }
+
+    for (let i = 0; i < targets.length; i++) {
+        const txt = targets[i];
+        if(name.indexOf(txt) !== -1) return true;
+    }
+
+    return false;
+};
+
+const scanStorage = async (indexData, confStorage, confWeb, targets) => {
+    const collection = (await fs.readdir(confStorage.path)).filter(e => isTarget(e, targets));
 
     for (let i = 0; i < collection.length; i++) {
         const element = collection[i];
@@ -51,32 +94,26 @@ const scanStorage = async (confStorage, confWeb, comixEntries) => {
 
         if(info.isDirectory() === true) {
             console.log('  scan start : ' + pathModule.join(confStorage.path, element));
+
+            await fs.rm(pathModule.join(confWeb.path,element), { recursive: true, force: true })
+            await fs.mkdir(pathModule.join(confWeb.path,element), { recursive: true });
             const volumes = await scan_comic(element, confStorage, confWeb, {});
 
-            const volumesJsonUrl =pathModule.join(confWeb.webroot, element+'.json');
-            const volumesJsonPath =pathModule.join(confWeb.path, element+'.json');
+            const volumesJsonUrl =pathModule.join(confWeb.webroot, element, 'entries.json');
+            const volumesJsonPath =pathModule.join(confWeb.path, element, 'entries.json');
 
             console.log("    write start volume json data : " + volumesJsonPath);
             await fs.writeFile(volumesJsonPath, JSON.stringify(volumes, null , "\t"));
             console.log("    write end volume json data : " + volumesJsonPath);
             
-            entries.push({
+            indexData[element] = {
                 name : element,
                 volumes : volumesJsonUrl,
-                thumbnail : volumes[0].thumbnail
-            });
+                thumbnail : volumes[volumes.length-1].thumbnail
+            };
             console.log('  scan end : ' + pathModule.join(confStorage.path, element));
         }
     }
-
-    const comicJsonPath = pathModule.join(confWeb.path, 'comics.json');
-    const comicJsonUrl = pathModule.join(confWeb.webroot, 'comics.json');
-
-    console.log("  write start comic json data : " + comicJsonPath);
-    await fs.writeFile(comicJsonPath, JSON.stringify(entries, null , "\t"));
-    console.log("  write end comic json data : " + comicJsonPath);
-
-    comixEntries.push(comicJsonUrl);
 };
 
 const scan_comic = async (comicName, confStorage, confWeb, options) => {
@@ -99,56 +136,12 @@ const scan_comic = async (comicName, confStorage, confWeb, options) => {
                 webroot : pathModule.join(confStorage.webroot, comicName, element)
             };
 
-            const volumesJsonPath =pathModule.join(confWeb.path, comicName+'_'+element+'.json');
+            const volumesJsonPath =pathModule.join(confWeb.path,comicName, comicName+'_'+element+'.json');
             console.log("        write start volume json data : " + volumesJsonPath);
             await fs.writeFile(volumesJsonPath, JSON.stringify(processed[element], null , "\t"));
             console.log("        write end volume json data : " + volumesJsonPath);
         }
     }
-
-    /*
-    for (let i = 0; i < collection.length; i++) {
-        const element = collection[i];
-        const volumePath = pathModule.join(rootPath, element);
-        const info = await fs.stat(volumePath);
-
-        if(info.isFile() === true && element.endsWith(".zip")) {
-            const basefilename = pathModule.basename(element, '.zip');
-            console.log('    scan volume [zip]: ' + element);
-            const exist = processed[basefilename] !== undefined;
-
-            const generateTarget = pathModule.join(rootPath, basefilename);
-            if(exist) {
-                console.log('      exist volume : ' + element);
-                console.log('      delete volume and overwrite : ' + element + ' => ' + basefilename);
-                await fs.rm(generateTarget, { recursive: true, force: true });
-                delete processed[basefilename];
-            };
-
-            const zipdata = await fs.readFile(volumePath);
-            const zip = jszip();
-            await zip.loadAsync(zipdata);
-
-            console.log('      create volume : ' + element);
-            await fs.mkdir(generateTarget, { recursive: true });
-
-            const entries = [];
-            for (const fileName in zip.files) {
-                const file = zip.files[fileName];
-                if(file.dir === true) {
-                    continue;
-                }
-                const content = await file.async('nodebuffer');
-                await fs.writeFile(pathModule.join(generateTarget, fileName), content);
-                entries.push(fileName);
-            }
-            processed[basefilename] = entries;
-
-            console.log('      delete volume zip : ' + volumePath);
-            await fs.rm(volumePath, { recursive: true, force: true });
-        }
-    }
-    */
 
     const result = [];
 
@@ -156,7 +149,7 @@ const scan_comic = async (comicName, confStorage, confWeb, options) => {
         result.push({
             key : e,
             thumbnail : processed[e].thumbnail,
-            meta : pathModule.join(confWeb.webroot, comicName+'_'+e+'.json')
+            meta : pathModule.join(confWeb.webroot, comicName, comicName+'_'+e+'.json')
         });
     });
 
@@ -164,7 +157,7 @@ const scan_comic = async (comicName, confStorage, confWeb, options) => {
 
 };
 
-const initialize = async (configure) => {
+const res_copy = async (configure) => {
 
     const htmlFile = pathModule.join(configure.web.path, 'index.html');
     const scriptFile = pathModule.join(configure.web.path, 'application.js');
@@ -209,7 +202,7 @@ $(async () =>  {
         }
     };
 
-    const entries = await (await fetch("./comics.json")).json();
+    const entries = await (await fetch("./index.json")).json();
     const routingModules = {};
 
     routingModules['comics'] = (() => {
