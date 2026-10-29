@@ -4,11 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "json": "node src/generate_json.js",
+    "unarchive": "node src/unarchive_comic.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "commander": "^15.0.0"
+    "adm-zip": "^0.6.1",
+    "commander": "^15.0.0",
+    "sharp": "^0.35.5",
+    "unrar-promise": "^3.1.0"
   }
 }

@@ -10,7 +10,7 @@ const { Command } = require('commander');
 const program = new Command();
 
 program
-  .name('comixapi-cli')
+  .name('comixapi-cli json')
   .description('漫画をWEBで閲覧するための漫画ごとのJSONファイルを生成する')
   .version('1.0.0');
 
