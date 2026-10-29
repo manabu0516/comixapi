@@ -93,9 +93,16 @@ const run = async () => {
 
 const handleFileData = async (entries, handlers) => {
     let result = entries;
+    const event = {
+        stoppropagation : false
+    };
+
     for (let i = 0; i < handlers.length; i++) {
+        if(event.stoppropagation === true) {
+            break;
+        }
         const h = handlers[i];
-        result = await h(result);
+        result = await h(result, event);
     }
     return result;
 };

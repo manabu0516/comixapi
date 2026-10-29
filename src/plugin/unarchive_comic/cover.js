@@ -20,9 +20,10 @@ module.exports = async () => {
 
     const context = {first : false};
 
-    const trim_image_cover = async (files) => {
+    const trim_image_cover = async (files, event) => {
         if(context.first === false) {
             context.first = true;
+            event.stoppropagation = true;
             return convert_image(files[0], files);
         }
         return files;

@@ -34,16 +34,11 @@ module.exports = async () => {
         return [p1, p2];
     };
 
-    const split_image_files = async (files) => {
+    const split_image_files = async (files, event) => {
         const result = [];
 
         for (let i = 0; i < files.length; i++) {
             const f = files[i];
-            if(f.indexOf('0000_cover') !== -1) {
-                result.push(f);
-                continue;
-            }
-
             const r = await split_image_file(f);
             r.forEach(e => result.push(e));
         }

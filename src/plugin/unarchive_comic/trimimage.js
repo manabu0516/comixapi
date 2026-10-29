@@ -16,16 +16,10 @@ module.exports = async () => {
         return outputPath;
     };
 
-    const trim_image_files = async (files) => {
+    const trim_image_files = async (files, event) => {
         const result = [];
-
         for (let i = 0; i < files.length; i++) {
             const f = files[i];
-            if(f.indexOf('0000_cover') !== -1) {
-                result.push(f);
-                continue;
-            }
-            
             const r = await trim_image_file(f);
             result.push(r);
         }
