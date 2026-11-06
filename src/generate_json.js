@@ -158,228 +158,26 @@ const scan_comic = async (comicName, confStorage, confWeb, options) => {
 };
 
 const res_copy = async (configure) => {
+    const o_htmlFile = pathModule.join(configure.web.path, 'index.html');
+    const o_appFile = pathModule.join(configure.web.path, 'application.js');
+    const o_swFile = pathModule.join(configure.web.path, 'sw.js');
+    const o_faviconFile = pathModule.join(configure.web.path, 'favicon.ico');
+    const o_manifestFile = pathModule.join(configure.web.path, 'manifest.json');
+    const o_iconDir = pathModule.join(configure.web.path, 'icons');
 
-    const htmlFile = pathModule.join(configure.web.path, 'index.html');
-    const scriptFile = pathModule.join(configure.web.path, 'application.js');
+    const i_htmlFile = pathModule.join(processIofo.module, 'web', 'index.html');
+    const i_appFile = pathModule.join(processIofo.module, 'web', 'application.js');
+    const i_swFile = pathModule.join(processIofo.module, 'web', 'sw.js');
+    const i_faviconFile = pathModule.join(processIofo.module, 'web', 'favicon.ico');
+    const i_manifestFile = pathModule.join(processIofo.module, 'web', 'manifest.json');
+    const i_iconDir = pathModule.join(processIofo.module, 'web', 'icons');
 
-    console.log("generate application file : start");
-    console.log("  start index html : " + htmlFile);
-    await fs.writeFile(htmlFile, INDEX_HTML, 'utf8');
-    console.log("  end index html : " + htmlFile);
-
-    console.log("  start javascript : " + scriptFile);
-    await fs.writeFile(scriptFile, APPLICATION_JS, 'utf8');
-    console.log("  end javascript : " + scriptFile);
+    await fs.copyFile(i_htmlFile, o_htmlFile);
+    await fs.copyFile(i_appFile, o_appFile);
+    await fs.copyFile(i_swFile, o_swFile);
+    await fs.copyFile(i_faviconFile, o_faviconFile);
+    await fs.copyFile(i_manifestFile, o_manifestFile);
+    await fs.cp(i_iconDir, o_iconDir, { recursive: true });
 };
-
-const APPLICATION_JS = `
-
-
-$(async () =>  {
-
-    Handlebars.registerHelper('basename', function(text) {
-        return text.split('.').slice(0, -1).join('.');
-    });
-
-    Handlebars.registerHelper('stringify', function(json) {
-        return new Handlebars.SafeString(JSON.stringify(json));
-    });
-
-    Handlebars.registerHelper('first', function(json) {
-        return json[0];
-    });
-    
-    Handlebars.registerHelper('bg', function(data) {
-        const url = data.thumbnail;
-        return "background-image:url("+url+");background-repeat: no-repeat;background-size: contain;background-position: center;background-color: dimgrey;";
-    });
-
-    const toJson = (text) => {
-        try {
-            return JSON.parse(decodeURI(text));
-        } catch(e) {
-            return {};
-        }
-    };
-
-    const entries = await (await fetch("./index.json")).json();
-    const routingModules = {};
-
-    routingModules['comics'] = (() => {
-
-        var template = Handlebars.compile($("#comics-template").html());
-        $(document).on("click", ".comic-item", (e) => {
-            const target = $(e.currentTarget).attr("data-comic");
-            location.hash = 'voluems,' + JSON.stringify({target : target});
-            return false;
-        });
-
-        return async (parameter) => {
-            console.log(entries);
-            return template({data : entries});
-        };
-    })();
-
-    routingModules['volume'] = (() => {
-        var template = Handlebars.compile($("#volume-template").html());
-        return async (parameter) => {
-            const target = parameter.target;
-            const response = await fetch(parameter.target);
-            const json = await response.json();
-            const entries = json.entries.map(e => {
-                return json.webroot + '/' + e;
-            });
-            return template({entries : entries});
-        };
-
-    })();
-
-    routingModules['voluems'] = (() => {
-        var template = Handlebars.compile($("#voluems-template").html());
-
-        $(document).on("click", ".volume-item", (e) => {
-            const pages = $(e.currentTarget).attr("data-pages");
-            location.hash = 'volume,' + JSON.stringify({target : pages});
-            return false;
-        });
-
-        return async (parameter) => {
-            const target = parameter.target;
-            const response = await fetch(parameter.target);
-            const json = await response.json();
-
-            console.log(json);
-            return template({data : json});
-        };
-    })();
-
-    const loading = {
-        show : () => {
-            $('#loading').removeClass('d-none');
-        },
-        hide : () => {
-            $('#loading').addClass('d-none');
-        },
-    };
-
-    const routing = async (navigation) => {
-        loading.show();
-
-        if(navigation === '') {
-            navigation = 'comics,{}';
-        }
-
-        const splitPoint1 = navigation.indexOf(',');
-        const target = splitPoint1 != -1 ? navigation.substring(0, splitPoint1) : navigation;
-        const parameter = toJson(splitPoint1 != -1 ? navigation.substring(splitPoint1+1) : "{}");
-
-     
-        const module = routingModules[target];
-        if(module === undefined) {
-            return;
-        }
-
-        const html = await module(parameter);
-        $("#container").html(html);
-        window.scroll({top: 0,behavior: "smooth",});
-        setTimeout(() => {loading.hide();}, 1000);
-        
-    };
-
-    window.onhashchange = () => {
-        const route = location.hash.length > 0 ? location.hash.substring(1) : '';
-        routing(route.trim());
-    };
-
-    routing(location.hash.length > 0 ? location.hash.substring(1).trim() : '');
-});
-`;
-
-const INDEX_HTML = `
-
-<!DOCTYPE html>
-<html lang="ha">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>comixapi viewer</title>
-    <link rel="stylesheet" href="https://bootswatch.com/5/flatly/bootstrap.min.css">
-
-    <style>
-        #loading {
-            background: rgba(0, 0, 0, .5);
-            z-index: 10000;
-        }
-        
-        .comic-item {width: 33%}
-        .volume-item {width: 33%}
-        .page-item {width: 50%;float: right;}
-        
-        .comic-item .img-thumbnail {height:300px;}
-        .volume-item .img-thumbnail {height:300px;}
-        
-        @media screen and (max-width: 480px) {
-            .comic-item {width: 100%}
-            .volume-item {width: 100%}
-            .page-item {width: 100%}
-        }
-    </style>
-
-  </head>
-  <body>
-
-    <div class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark">
-        <div class="container">
-            <a href="#comics" class="navbar-brand">Comixapi Viewer</a>
-        </div>
-    </div>
-    
-    <div id="loading" class="top-0 start-0 w-100 h-100" style="position: fixed;">
-        <div class="text-center position-absolute top-50 start-50 w-100 translate-middle">
-            <div class="spinner-border text-light" role="status">
-                <span class="sr-only"></span>
-            </div>
-        </div>
-    </div>
-
-    <div class="container" style="margin-top: 100px;" id="container">
-    </div>
-
-    <script id="comics-template" type="text/x-handlebars-template">
-        <div class="row row-cols-1">
-            {{#each data}}
-            <div data-comic="{{volumes}}" class="col comic-item" style="text-align: center;padding: 10px;cursor: pointer;">
-                <div class="img-thumbnail" style="{{bg this}}"></div>
-            </div>
-            {{/each}}
-        </div>
-    </script>
-
-    <script id="voluems-template" type="text/x-handlebars-template">
-        <div class="row row-cols-1">
-            {{#each data}}
-            <div data-pages='{{meta}}' class="col volume-item" style="position: relative; padding: 10px;cursor: pointer;">
-                <div class="img-thumbnail" style="{{bg this}}"></div>
-            </div>
-            {{/each}}
-        </div>
-    </script>
-
-    <script id="volume-template" type="text/x-handlebars-template">
-        <div style="text-align: center;">
-        {{#each entries}}
-        <div style="padding: 5px;text-align: center;" class="page-item">
-            <img class="img-thumbnail" loading="lazy" src="{{this}}" style="width: 100%;"></a>
-        </div>
-        {{/each}}
-        </div>
-    </script>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.8/handlebars.min.js" integrity="sha512-E1dSFxg+wsfJ4HKjutk/WaCzK7S2wv1POn1RRPGh8ZK+ag9l244Vqxji3r6wgz9YBf6+vhQEYJZpSjqWFPg9gg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-    <script src="application.js"></script>
-  </body>
-</html>
-`;
 
 run();
