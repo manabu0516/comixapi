@@ -1,10 +1,10 @@
-const CACHE_NAME = 'comixapi-pwa-cache-v0.17';
+const CACHE_NAME = 'comixapi-pwa-cache-v0.19';
 
 const ASSETS_TO_CACHE = [
   './?v='+CACHE_NAME,
   './index.html?v='+CACHE_NAME,
   './application.js?v='+CACHE_NAME,
-  './manifest.json',
+  './manifest.json?v='+CACHE_NAME,
   'https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.8/handlebars.min.js',
   'https://code.jquery.com/jquery-3.7.1.min.js',
   'https://bootswatch.com/5/flatly/bootstrap.min.css',

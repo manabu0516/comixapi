@@ -176,8 +176,15 @@ const res_copy = async (configure) => {
     await fs.copyFile(i_appFile, o_appFile);
     await fs.copyFile(i_swFile, o_swFile);
     await fs.copyFile(i_faviconFile, o_faviconFile);
-    await fs.copyFile(i_manifestFile, o_manifestFile);
     await fs.cp(i_iconDir, o_iconDir, { recursive: true });
+
+    const manifest = JSON.parse(await fs.readFile(i_manifestFile, { encoding: 'utf8' }));
+    if(configure.app && configure.app.suffix) {
+        manifest.name = manifest.name + '(' +configure.app.suffix+ ')';
+        manifest.short_name = manifest.short_name + '(' +configure.app.suffix+ ')';
+    }
+    await fs.writeFile(o_manifestFile, JSON.stringify(manifest, null, 2), 'utf-8');
+
 };
 
 run();
