@@ -41,6 +41,7 @@ $(async () =>  {
 
         return async (parameter) => {
             console.log(entries);
+            window.scrollTo(0, 0);
             return template({data : entries});
         };
     })();
@@ -54,6 +55,14 @@ $(async () =>  {
             const entries = json.entries.map(e => {
                 return json.webroot + '/' + e;
             });
+
+            setTimeout(() => {
+                const scrollPosition = sessionStorage.getItem('savedScrollPosition');
+                if (scrollPosition) {
+                    window.scrollTo(0, parseInt(scrollPosition, 10));
+                    sessionStorage.removeItem('savedScrollPosition');
+                }
+            }, 100);
             return template({entries : entries});
         };
 
@@ -74,6 +83,7 @@ $(async () =>  {
             const json = await response.json();
 
             console.log(json);
+            window.scrollTo(0, 0);
             return template({data : json});
         };
     })();
@@ -115,6 +125,16 @@ $(async () =>  {
         const route = location.hash.length > 0 ? location.hash.substring(1) : '';
         routing(route.trim());
     };
+
+    const context = {scrollTimeout : null};
+
+    window.addEventListener('scroll', () => {        
+        clearTimeout(context.scrollTimeout);
+
+        context.scrollTimeout = setTimeout(() => {
+            sessionStorage.setItem('savedScrollPosition', window.scrollY);
+        }, 100);
+    });
 
     routing(location.hash.length > 0 ? location.hash.substring(1).trim() : '');
 });
