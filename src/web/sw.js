@@ -1,13 +1,13 @@
-const CACHE_NAME = 'comixapi-pwa-cache-v0.13';
+const CACHE_NAME = 'comixapi-pwa-cache-v0.15';
 
 const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
+  './?v='+CACHE_NAME,
+  './index.html?v='+CACHE_NAME,
+  './application.js?v='+CACHE_NAME,
   './manifest.json',
-   './application.js',
-   'https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.8/handlebars.min.js',
-   'https://code.jquery.com/jquery-3.7.1.min.js',
-   'https://bootswatch.com/5/flatly/bootstrap.min.css',
+  'https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.8/handlebars.min.js',
+  'https://code.jquery.com/jquery-3.7.1.min.js',
+  'https://bootswatch.com/5/flatly/bootstrap.min.css',
 
   './icons/icon-16x16.png',
   './icons/icon-32x32.png',
@@ -53,7 +53,7 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request).then((response) => {
+    caches.match(event.request, { ignoreSearch: true }).then((response) => {
       return response || fetch(event.request);
     })
   );

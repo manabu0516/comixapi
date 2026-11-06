@@ -25,7 +25,9 @@ $(async () =>  {
         }
     };
 
-    const entries = await (await fetch("./index.json")).json();
+    const timestamp = () => Date.now();
+
+    const entries = await (await fetch("./index.json?_=" + timestamp())).json();
     const routingModules = {};
 
     routingModules['comics'] = (() => {
@@ -47,7 +49,7 @@ $(async () =>  {
         var template = Handlebars.compile($("#volume-template").html());
         return async (parameter) => {
             const target = parameter.target;
-            const response = await fetch(parameter.target);
+            const response = await fetch(parameter.target + '?_='+timestamp());
             const json = await response.json();
             const entries = json.entries.map(e => {
                 return json.webroot + '/' + e;
@@ -68,7 +70,7 @@ $(async () =>  {
 
         return async (parameter) => {
             const target = parameter.target;
-            const response = await fetch(parameter.target);
+            const response = await fetch(parameter.target+'?_='+timestamp());
             const json = await response.json();
 
             console.log(json);
