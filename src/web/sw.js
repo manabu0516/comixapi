@@ -1,4 +1,4 @@
-const CACHE_NAME = 'comixapi-pwa-cache-v0.12';
+const CACHE_NAME = 'comixapi-pwa-cache-v0.13';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -7,7 +7,22 @@ const ASSETS_TO_CACHE = [
    './application.js',
    'https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.8/handlebars.min.js',
    'https://code.jquery.com/jquery-3.7.1.min.js',
-   'https://bootswatch.com/5/flatly/bootstrap.min.css'
+   'https://bootswatch.com/5/flatly/bootstrap.min.css',
+
+  './icons/icon-16x16.png',
+  './icons/icon-32x32.png',
+  './icons/icon-48x48.png',
+  './icons/icon-64x64.png',
+  './icons/icon-96x96.png',
+  './icons/icon-128x128.png',
+  './icons/icon-144x144.png',
+  './icons/icon-152x152.png',
+  './icons/icon-180x180.png',
+  './icons/icon-192x192.png',
+  './icons/icon-192x192-maskable.png',
+  './icons/icon-384x384.png',
+  './icons/icon-512x512.png',
+  './icons/icon-512x512-maskable.png'
 ];
 
 self.addEventListener('install', (event) => {
