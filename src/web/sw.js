@@ -1,4 +1,4 @@
-const CACHE_NAME = 'comixapi-pwa-cache-v0.22';
+const CACHE_NAME = 'comixapi-pwa-cache-v0.23';
 
 const ASSETS_TO_CACHE = [
   './?v='+CACHE_NAME,

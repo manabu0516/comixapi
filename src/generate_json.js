@@ -185,6 +185,7 @@ const res_copy = async (configure) => {
     }
     manifest.scope = configure.web.webroot;
     manifest.id = configure.web.webroot + 'index.html';
+    manifest.start_url = configure.web.webroot + 'index.html';
     await fs.writeFile(o_manifestFile, JSON.stringify(manifest, null, 2), 'utf-8');
 
 };
