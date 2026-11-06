@@ -183,6 +183,8 @@ const res_copy = async (configure) => {
         manifest.name = manifest.name + '(' +configure.app.suffix+ ')';
         manifest.short_name = manifest.short_name + '(' +configure.app.suffix+ ')';
     }
+    manifest.scope = configure.web.webroot;
+    manifest.id = configure.web.webroot + 'index.html';
     await fs.writeFile(o_manifestFile, JSON.stringify(manifest, null, 2), 'utf-8');
 
 };
